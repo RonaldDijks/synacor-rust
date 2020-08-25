@@ -10,9 +10,11 @@ const NUM_REGISTERS: usize = 8;
 pub enum Operation {
     Halt,
     Set(Operand, Operand),
+    Eq(Operand, Operand, Operand),
     Jump(Operand),
     Jt(Operand, Operand),
     Jf(Operand, Operand),
+    Add(Operand, Operand, Operand),
     Out(Operand),
     Noop,
 }
@@ -73,9 +75,19 @@ impl VM {
         match opcode {
             0 => Operation::Halt,
             1 => Operation::Set(self.parse_operand(), self.parse_operand()),
+            4 => Operation::Eq(
+                self.parse_operand(),
+                self.parse_operand(),
+                self.parse_operand(),
+            ),
             6 => Operation::Jump(self.parse_operand()),
             7 => Operation::Jt(self.parse_operand(), self.parse_operand()),
             8 => Operation::Jf(self.parse_operand(), self.parse_operand()),
+            9 => Operation::Add(
+                self.parse_operand(),
+                self.parse_operand(),
+                self.parse_operand(),
+            ),
             19 => Operation::Out(self.parse_operand()),
             21 => Operation::Noop,
             _ => panic!("Unexpected opcode: {}", opcode),
@@ -89,6 +101,13 @@ impl VM {
         }
     }
 
+    fn set_value(&mut self, address: Operand, value: u16) {
+        match address {
+            Operand::Literal(n) => self.memory[n] = value,
+            Operand::Register(r) => self.registers[r] = value,
+        }
+    }
+
     pub fn execute(&mut self) {
         loop {
             let op = self.parse_operation();
@@ -96,10 +115,13 @@ impl VM {
                 Operation::Halt => break,
                 Operation::Set(a, b) => {
                     let b = self.get_operand(b);
-                    match a {
-                        Operand::Literal(n) => self.memory[n] = b,
-                        Operand::Register(r) => self.registers[r] = b,
-                    }
+                    self.set_value(a, b);
+                }
+                Operation::Eq(a, b, c) => {
+                    let b = self.get_operand(b);
+                    let c = self.get_operand(c);
+                    let value = if b == c { 1 } else { 0 };
+                    self.set_value(a, value);
                 }
                 Operation::Jump(a) => {
                     self.pc = self.get_operand(a);
@@ -117,6 +139,12 @@ impl VM {
                     if a == 0 {
                         self.pc = b
                     }
+                }
+                Operation::Add(a, b, c) => {
+                    let b = self.get_operand(b);
+                    let c = self.get_operand(c);
+                    let value = (b + c) % 32768;
+                    self.set_value(a, value)
                 }
                 Operation::Out(a) => {
                     let a = self.get_operand(a) as u32;
