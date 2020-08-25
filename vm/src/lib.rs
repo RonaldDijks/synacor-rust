@@ -7,7 +7,7 @@ const MEM_SIZE: usize = 32768;
 const NUM_REGISTERS: usize = 8;
 
 #[derive(Debug)]
-pub enum OperationType {
+pub enum Operation {
     Halt,
     Jump(u16),
     Out(char),
@@ -40,30 +40,30 @@ impl VM {
         }
     }
 
-    fn next_operation(&mut self) -> OperationType {
+    fn next_operation(&mut self) -> Operation {
         let opcode = self.memory[self.pc as usize];
         match opcode {
             0 => {
                 self.pc += 1;
-                OperationType::Halt
+                Operation::Halt
             }
             6 => {
                 self.pc += 1;
                 let address = self.memory[self.pc as usize];
-                OperationType::Jump(address)
+                Operation::Jump(address)
             }
             19 => {
                 self.pc += 1;
                 let charcode = self.memory[self.pc as usize] as u32;
                 let character = std::char::from_u32(charcode)
-                    .map(OperationType::Out)
+                    .map(Operation::Out)
                     .unwrap();
                 self.pc += 1;
                 character
             }
             21 => {
                 self.pc += 1;
-                OperationType::Noop
+                Operation::Noop
             }
             _ => panic!("Unexpected opcode: {}", opcode),
         }
@@ -73,16 +73,16 @@ impl VM {
         loop {
             let op = self.next_operation();
             match op {
-                OperationType::Halt => {
+                Operation::Halt => {
                     break;
                 }
-                OperationType::Jump(address) => {
+                Operation::Jump(address) => {
                     self.pc = address;
                 }
-                OperationType::Out(c) => {
+                Operation::Out(c) => {
                     print!("{}", c);
                 }
-                OperationType::Noop => {
+                Operation::Noop => {
                     continue;
                 }
             }
