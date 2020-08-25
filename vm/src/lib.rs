@@ -9,6 +9,7 @@ const NUM_REGISTERS: usize = 8;
 #[derive(Debug)]
 pub enum OperationType {
     Halt,
+    Jump(u16),
     Out(char),
     Noop,
 }
@@ -17,7 +18,7 @@ pub struct VM {
     memory: [u16; MEM_SIZE],
     registers: [u16; NUM_REGISTERS],
     stack: Vec<u16>,
-    pc: usize,
+    pc: u16,
 }
 
 impl VM {
@@ -40,15 +41,20 @@ impl VM {
     }
 
     fn next_operation(&mut self) -> OperationType {
-        let opcode = self.memory[self.pc];
+        let opcode = self.memory[self.pc as usize];
         match opcode {
             0 => {
                 self.pc += 1;
                 OperationType::Halt
             }
+            6 => {
+                self.pc += 1;
+                let address = self.memory[self.pc as usize];
+                OperationType::Jump(address)
+            }
             19 => {
                 self.pc += 1;
-                let charcode = self.memory[self.pc] as u32;
+                let charcode = self.memory[self.pc as usize] as u32;
                 let character = std::char::from_u32(charcode)
                     .map(OperationType::Out)
                     .unwrap();
@@ -69,6 +75,9 @@ impl VM {
             match op {
                 OperationType::Halt => {
                     break;
+                }
+                OperationType::Jump(address) => {
+                    self.pc = address;
                 }
                 OperationType::Out(c) => {
                     print!("{}", c);
