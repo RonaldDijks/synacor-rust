@@ -9,9 +9,27 @@ const NUM_REGISTERS: usize = 8;
 #[derive(Debug)]
 pub enum Operation {
     Halt,
-    Jump(u16),
-    Out(char),
+    Jump(Operand),
+    Out(Operand),
     Noop,
+}
+
+#[derive(Debug)]
+pub enum Operand {
+    Literal(usize),
+    Register(usize),
+}
+
+impl Operand {
+    pub fn new(code: u16) -> Self {
+        if code < 32767 {
+            Operand::Literal(code as usize)
+        } else if code < 32776 {
+            Operand::Register((code % 32768) as usize)
+        } else {
+            panic!("Unexpected operand: {}", code)
+        }
+    }
 }
 
 pub struct VM {
@@ -40,51 +58,45 @@ impl VM {
         }
     }
 
-    fn next_operation(&mut self) -> Operation {
+    pub fn parse_operand(&mut self) -> Operand {
+        let code = self.memory[self.pc as usize];
+        self.pc += 1;
+        Operand::new(code)
+    }
+
+    fn parse_operation(&mut self) -> Operation {
         let opcode = self.memory[self.pc as usize];
+        self.pc += 1;
         match opcode {
-            0 => {
-                self.pc += 1;
-                Operation::Halt
-            }
-            6 => {
-                self.pc += 1;
-                let address = self.memory[self.pc as usize];
-                Operation::Jump(address)
-            }
-            19 => {
-                self.pc += 1;
-                let charcode = self.memory[self.pc as usize] as u32;
-                let character = std::char::from_u32(charcode)
-                    .map(Operation::Out)
-                    .unwrap();
-                self.pc += 1;
-                character
-            }
-            21 => {
-                self.pc += 1;
-                Operation::Noop
-            }
+            0 => Operation::Halt,
+            6 => Operation::Jump(self.parse_operand()),
+            19 => Operation::Out(self.parse_operand()),
+            21 => Operation::Noop,
             _ => panic!("Unexpected opcode: {}", opcode),
+        }
+    }
+
+    fn get_operand(&mut self, operand: Operand) -> u16 {
+        match operand {
+            Operand::Literal(n) => n as u16,
+            Operand::Register(r) => self.registers[r],
         }
     }
 
     pub fn execute(&mut self) {
         loop {
-            let op = self.next_operation();
+            let op = self.parse_operation();
             match op {
-                Operation::Halt => {
-                    break;
+                Operation::Halt => break,
+                Operation::Jump(a) => {
+                    self.pc = self.get_operand(a);
                 }
-                Operation::Jump(address) => {
-                    self.pc = address;
+                Operation::Out(a) => {
+                    let a = self.get_operand(a) as u32;
+                    let a = std::char::from_u32(a).unwrap();
+                    print!("{}", a);
                 }
-                Operation::Out(c) => {
-                    print!("{}", c);
-                }
-                Operation::Noop => {
-                    continue;
-                }
+                Operation::Noop => continue,
             }
         }
     }
