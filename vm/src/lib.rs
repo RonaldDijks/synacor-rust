@@ -11,6 +11,7 @@ pub enum Operation {
     Halt,
     Set(Operand, Operand),
     Push(Operand),
+    Pop(Operand),
     Eq(Operand, Operand, Operand),
     Jump(Operand),
     Jt(Operand, Operand),
@@ -77,6 +78,7 @@ impl VM {
             0 => Operation::Halt,
             1 => Operation::Set(self.parse_operand(), self.parse_operand()),
             2 => Operation::Push(self.parse_operand()),
+            3 => Operation::Pop(self.parse_operand()),
             4 => Operation::Eq(
                 self.parse_operand(),
                 self.parse_operand(),
@@ -122,6 +124,14 @@ impl VM {
                 Operation::Push(a) => {
                     let a = self.get_operand(a);
                     self.stack.push(a);
+                }
+                Operation::Pop(a) => {
+                    match self.stack.pop() {
+                        None => panic!(""),
+                        Some(value) => {
+                            self.set_value(a, value)
+                        }
+                    }
                 }
                 Operation::Eq(a, b, c) => {
                     let b = self.get_operand(b);
