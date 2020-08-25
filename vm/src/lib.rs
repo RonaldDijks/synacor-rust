@@ -3,6 +3,7 @@
 use byteorder::{LittleEndian, ReadBytesExt};
 use std::io::Cursor;
 use std::ops::BitAnd;
+use std::ops::BitOr;
 
 const MEM_SIZE: usize = 32768;
 const NUM_REGISTERS: usize = 8;
@@ -20,6 +21,7 @@ pub enum Operation {
     Jf(Operand, Operand),
     Add(Operand, Operand, Operand),
     And(Operand, Operand, Operand),
+    Or(Operand, Operand, Operand),
     Out(Operand),
     Noop,
 }
@@ -105,6 +107,11 @@ impl VM {
                 self.parse_operand(),
                 self.parse_operand()
             ),
+            13 => Operation::Or(
+                self.parse_operand(),
+                self.parse_operand(),
+                self.parse_operand()
+            ),
             19 => Operation::Out(self.parse_operand()),
             21 => Operation::Noop,
             _ => panic!("Unexpected opcode: {}", opcode),
@@ -185,6 +192,12 @@ impl VM {
                     let b = self.get_operand(b);
                     let c = self.get_operand(c);
                     let value = (b.bitand(c)) % 32768;
+                    self.set_value(a, value)
+                }
+                Operation::Or(a, b, c) => {
+                    let b = self.get_operand(b);
+                    let c = self.get_operand(c);
+                    let value = (b.bitor(c)) % 32768;
                     self.set_value(a, value)
                 }
                 Operation::Out(a) => {
