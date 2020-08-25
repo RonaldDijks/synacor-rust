@@ -75,7 +75,7 @@ impl VM {
         }
     }
 
-    pub fn parse_operand(&mut self) -> Operand {
+    pub fn parse_op(&mut self) -> Operand {
         let code = self.memory[self.pc as usize];
         self.pc += 1;
         Operand::new(code)
@@ -86,68 +86,35 @@ impl VM {
         self.pc += 1;
         match opcode {
             0 => Operation::Halt,
-            1 => Operation::Set(self.parse_operand(), self.parse_operand()),
-            2 => Operation::Push(self.parse_operand()),
-            3 => Operation::Pop(self.parse_operand()),
-            4 => Operation::Eq(
-                self.parse_operand(),
-                self.parse_operand(),
-                self.parse_operand(),
-            ),
-            5 => Operation::Gt(
-                self.parse_operand(),
-                self.parse_operand(),
-                self.parse_operand(),
-            ),
-            6 => Operation::Jump(self.parse_operand()),
-            7 => Operation::Jt(self.parse_operand(), self.parse_operand()),
-            8 => Operation::Jf(self.parse_operand(), self.parse_operand()),
-            9 => Operation::Add(
-                self.parse_operand(),
-                self.parse_operand(),
-                self.parse_operand(),
-            ),
-            10 => Operation::Mult(
-                self.parse_operand(),
-                self.parse_operand(),
-                self.parse_operand(),
-            ),
-            11 => Operation::Mod(
-                self.parse_operand(),
-                self.parse_operand(),
-                self.parse_operand(),
-            ),
-            12 => Operation::And(
-                self.parse_operand(),
-                self.parse_operand(),
-                self.parse_operand()
-            ),
-            13 => Operation::Or(
-                self.parse_operand(),
-                self.parse_operand(),
-                self.parse_operand()
-            ),
-            14 => Operation::Not(
-                self.parse_operand(),
-                self.parse_operand()
-            ),
-            17 => Operation::Call(
-                self.parse_operand()
-            ),
-            19 => Operation::Out(self.parse_operand()),
+            1 => Operation::Set(self.parse_op(), self.parse_op()),
+            2 => Operation::Push(self.parse_op()),
+            3 => Operation::Pop(self.parse_op()),
+            4 => Operation::Eq(self.parse_op(), self.parse_op(), self.parse_op()),
+            5 => Operation::Gt(self.parse_op(), self.parse_op(), self.parse_op()),
+            6 => Operation::Jump(self.parse_op()),
+            7 => Operation::Jt(self.parse_op(), self.parse_op()),
+            8 => Operation::Jf(self.parse_op(), self.parse_op()),
+            9 => Operation::Add(self.parse_op(), self.parse_op(), self.parse_op()),
+            10 => Operation::Mult(self.parse_op(), self.parse_op(), self.parse_op()),
+            11 => Operation::Mod(self.parse_op(), self.parse_op(), self.parse_op()),
+            12 => Operation::And(self.parse_op(), self.parse_op(), self.parse_op()),
+            13 => Operation::Or(self.parse_op(), self.parse_op(), self.parse_op()),
+            14 => Operation::Not(self.parse_op(), self.parse_op()),
+            17 => Operation::Call(self.parse_op()),
+            19 => Operation::Out(self.parse_op()),
             21 => Operation::Noop,
             _ => panic!("Unexpected opcode: {}", opcode),
         }
     }
 
-    fn get_operand(&mut self, operand: Operand) -> u16 {
+    fn read(&mut self, operand: Operand) -> u16 {
         match operand {
             Operand::Literal(n) => n as u16,
             Operand::Register(r) => self.registers[r],
         }
     }
 
-    fn set_value(&mut self, address: Operand, value: u16) {
+    fn set(&mut self, address: Operand, value: u16) {
         match address {
             Operand::Literal(n) => self.memory[n] = value,
             Operand::Register(r) => self.registers[r] = value,
@@ -160,92 +127,88 @@ impl VM {
             match op {
                 Operation::Halt => break,
                 Operation::Set(a, b) => {
-                    let b = self.get_operand(b);
-                    self.set_value(a, b);
+                    let b = self.read(b);
+                    self.set(a, b);
                 }
                 Operation::Push(a) => {
-                    let a = self.get_operand(a);
+                    let a = self.read(a);
                     self.stack.push(a);
                 }
-                Operation::Pop(a) => {
-                    match self.stack.pop() {
-                        None => panic!(""),
-                        Some(value) => {
-                            self.set_value(a, value)
-                        }
-                    }
-                }
+                Operation::Pop(a) => match self.stack.pop() {
+                    None => panic!(""),
+                    Some(value) => self.set(a, value),
+                },
                 Operation::Eq(a, b, c) => {
-                    let b = self.get_operand(b);
-                    let c = self.get_operand(c);
+                    let b = self.read(b);
+                    let c = self.read(c);
                     let value = if b == c { 1 } else { 0 };
-                    self.set_value(a, value);
+                    self.set(a, value);
                 }
                 Operation::Gt(a, b, c) => {
-                    let b = self.get_operand(b);
-                    let c = self.get_operand(c);
+                    let b = self.read(b);
+                    let c = self.read(c);
                     let value = if b > c { 1 } else { 0 };
-                    self.set_value(a, value);
+                    self.set(a, value);
                 }
                 Operation::Jump(a) => {
-                    self.pc = self.get_operand(a);
+                    self.pc = self.read(a);
                 }
                 Operation::Jt(a, b) => {
-                    let a = self.get_operand(a);
-                    let b = self.get_operand(b);
+                    let a = self.read(a);
+                    let b = self.read(b);
                     if a > 0 {
                         self.pc = b
                     }
                 }
                 Operation::Jf(a, b) => {
-                    let a = self.get_operand(a);
-                    let b = self.get_operand(b);
+                    let a = self.read(a);
+                    let b = self.read(b);
                     if a == 0 {
                         self.pc = b
                     }
                 }
                 Operation::Add(a, b, c) => {
-                    let b = self.get_operand(b);
-                    let c = self.get_operand(c);
+                    let b = self.read(b);
+                    let c = self.read(c);
                     let value = (b + c) % MAX_NUM;
-                    self.set_value(a, value)
+                    self.set(a, value)
                 }
                 Operation::Mult(a, b, c) => {
-                    let b = self.get_operand(b);
-                    let c = self.get_operand(c);
+                    let b = self.read(b);
+                    let c = self.read(c);
                     let value = b.wrapping_mul(c) % MAX_NUM;
-                    self.set_value(a, value)
+                    self.set(a, value)
                 }
                 Operation::Mod(a, b, c) => {
-                    let b = self.get_operand(b);
-                    let c = self.get_operand(c);
+                    let b = self.read(b);
+                    let c = self.read(c);
                     let value = (b % c) % MAX_NUM;
-                    self.set_value(a, value)
+                    self.set(a, value)
                 }
                 Operation::And(a, b, c) => {
-                    let b = self.get_operand(b);
-                    let c = self.get_operand(c);
+                    let b = self.read(b);
+                    let c = self.read(c);
                     let value = (b.bitand(c)) % MAX_NUM;
-                    self.set_value(a, value)
+                    self.set(a, value)
                 }
                 Operation::Or(a, b, c) => {
-                    let b = self.get_operand(b);
-                    let c = self.get_operand(c);
+                    let b = self.read(b);
+                    let c = self.read(c);
                     let value = (b.bitor(c)) % MAX_NUM;
-                    self.set_value(a, value)
+                    self.set(a, value)
                 }
                 Operation::Not(a, b) => {
-                    let b = self.get_operand(b);
+                    let b = self.read(b);
                     let value = (!b) % MAX_NUM;
-                    self.set_value(a, value)
+                    self.set(a, value)
                 }
                 Operation::Call(a) => {
-                    let a = self.get_operand(a);
+                    let a = self.read(a);
                     self.stack.push(self.pc);
                     self.pc = a;
                 }
                 Operation::Out(a) => {
-                    let a = self.get_operand(a) as u32;
+                    let a = self.read(a) as u32;
                     let a = std::char::from_u32(a).unwrap();
                     print!("{}", a);
                 }
