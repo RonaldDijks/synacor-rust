@@ -11,6 +11,7 @@ pub enum Operation {
     Halt,
     Jump(Operand),
     Jt(Operand, Operand),
+    Jf(Operand, Operand),
     Out(Operand),
     Noop,
 }
@@ -72,6 +73,7 @@ impl VM {
             0 => Operation::Halt,
             6 => Operation::Jump(self.parse_operand()),
             7 => Operation::Jt(self.parse_operand(), self.parse_operand()),
+            8 => Operation::Jf(self.parse_operand(), self.parse_operand()),
             19 => Operation::Out(self.parse_operand()),
             21 => Operation::Noop,
             _ => panic!("Unexpected opcode: {}", opcode),
@@ -97,6 +99,11 @@ impl VM {
                     let a = self.get_operand(a);
                     let b = self.get_operand(b);
                     if a > 0 { self.pc = b }
+                }
+                Operation::Jf(a, b) => {
+                    let a = self.get_operand(a);
+                    let b = self.get_operand(b);
+                    if a == 0 { self.pc = b }
                 }
                 Operation::Out(a) => {
                     let a = self.get_operand(a) as u32;
