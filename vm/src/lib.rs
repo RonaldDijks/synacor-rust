@@ -10,6 +10,7 @@ const NUM_REGISTERS: usize = 8;
 pub enum Operation {
     Halt,
     Set(Operand, Operand),
+    Push(Operand),
     Eq(Operand, Operand, Operand),
     Jump(Operand),
     Jt(Operand, Operand),
@@ -75,6 +76,7 @@ impl VM {
         match opcode {
             0 => Operation::Halt,
             1 => Operation::Set(self.parse_operand(), self.parse_operand()),
+            2 => Operation::Push(self.parse_operand()),
             4 => Operation::Eq(
                 self.parse_operand(),
                 self.parse_operand(),
@@ -116,6 +118,10 @@ impl VM {
                 Operation::Set(a, b) => {
                     let b = self.get_operand(b);
                     self.set_value(a, b);
+                }
+                Operation::Push(a) => {
+                    let a = self.get_operand(a);
+                    self.stack.push(a);
                 }
                 Operation::Eq(a, b, c) => {
                     let b = self.get_operand(b);
