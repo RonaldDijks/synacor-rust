@@ -9,6 +9,7 @@ const NUM_REGISTERS: usize = 8;
 #[derive(Debug)]
 pub enum Operation {
     Halt,
+    Set(Operand, Operand),
     Jump(Operand),
     Jt(Operand, Operand),
     Jf(Operand, Operand),
@@ -71,6 +72,7 @@ impl VM {
         self.pc += 1;
         match opcode {
             0 => Operation::Halt,
+            1 => Operation::Set(self.parse_operand(), self.parse_operand()),
             6 => Operation::Jump(self.parse_operand()),
             7 => Operation::Jt(self.parse_operand(), self.parse_operand()),
             8 => Operation::Jf(self.parse_operand(), self.parse_operand()),
@@ -92,18 +94,29 @@ impl VM {
             let op = self.parse_operation();
             match op {
                 Operation::Halt => break,
+                Operation::Set(a, b) => {
+                    let b = self.get_operand(b);
+                    match a {
+                        Operand::Literal(n) => self.memory[n] = b,
+                        Operand::Register(r) => self.registers[r] = b,
+                    }
+                }
                 Operation::Jump(a) => {
                     self.pc = self.get_operand(a);
                 }
                 Operation::Jt(a, b) => {
                     let a = self.get_operand(a);
                     let b = self.get_operand(b);
-                    if a > 0 { self.pc = b }
+                    if a > 0 {
+                        self.pc = b
+                    }
                 }
                 Operation::Jf(a, b) => {
                     let a = self.get_operand(a);
                     let b = self.get_operand(b);
-                    if a == 0 { self.pc = b }
+                    if a == 0 {
+                        self.pc = b
+                    }
                 }
                 Operation::Out(a) => {
                     let a = self.get_operand(a) as u32;
