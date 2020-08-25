@@ -22,6 +22,7 @@ pub enum Operation {
     Jf(Operand, Operand),
     Add(Operand, Operand, Operand),
     Mult(Operand, Operand, Operand),
+    Mod(Operand, Operand, Operand),
     And(Operand, Operand, Operand),
     Or(Operand, Operand, Operand),
     Not(Operand, Operand),
@@ -107,6 +108,11 @@ impl VM {
                 self.parse_operand(),
             ),
             10 => Operation::Mult(
+                self.parse_operand(),
+                self.parse_operand(),
+                self.parse_operand(),
+            ),
+            11 => Operation::Mod(
                 self.parse_operand(),
                 self.parse_operand(),
                 self.parse_operand(),
@@ -208,6 +214,12 @@ impl VM {
                     let b = self.get_operand(b);
                     let c = self.get_operand(c);
                     let value = b.wrapping_mul(c) % MAX_NUM;
+                    self.set_value(a, value)
+                }
+                Operation::Mod(a, b, c) => {
+                    let b = self.get_operand(b);
+                    let c = self.get_operand(c);
+                    let value = (b % c) % MAX_NUM;
                     self.set_value(a, value)
                 }
                 Operation::And(a, b, c) => {
