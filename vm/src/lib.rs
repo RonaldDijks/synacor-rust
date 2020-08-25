@@ -13,6 +13,7 @@ pub enum Operation {
     Push(Operand),
     Pop(Operand),
     Eq(Operand, Operand, Operand),
+    Gt(Operand, Operand, Operand),
     Jump(Operand),
     Jt(Operand, Operand),
     Jf(Operand, Operand),
@@ -84,6 +85,11 @@ impl VM {
                 self.parse_operand(),
                 self.parse_operand(),
             ),
+            5 => Operation::Gt(
+                self.parse_operand(),
+                self.parse_operand(),
+                self.parse_operand(),
+            ),
             6 => Operation::Jump(self.parse_operand()),
             7 => Operation::Jt(self.parse_operand(), self.parse_operand()),
             8 => Operation::Jf(self.parse_operand(), self.parse_operand()),
@@ -137,6 +143,12 @@ impl VM {
                     let b = self.get_operand(b);
                     let c = self.get_operand(c);
                     let value = if b == c { 1 } else { 0 };
+                    self.set_value(a, value);
+                }
+                Operation::Gt(a, b, c) => {
+                    let b = self.get_operand(b);
+                    let c = self.get_operand(c);
+                    let value = if b > c { 1 } else { 0 };
                     self.set_value(a, value);
                 }
                 Operation::Jump(a) => {
