@@ -7,6 +7,7 @@ use std::ops::BitOr;
 
 const MEM_SIZE: usize = 32768;
 const NUM_REGISTERS: usize = 8;
+const MAX_NUM: u16 = 32768;
 
 #[derive(Debug)]
 pub enum Operation {
@@ -22,6 +23,7 @@ pub enum Operation {
     Add(Operand, Operand, Operand),
     And(Operand, Operand, Operand),
     Or(Operand, Operand, Operand),
+    Not(Operand, Operand),
     Out(Operand),
     Noop,
 }
@@ -34,10 +36,10 @@ pub enum Operand {
 
 impl Operand {
     pub fn new(code: u16) -> Self {
-        if code < 32767 {
+        if code < 32768 {
             Operand::Literal(code as usize)
         } else if code < 32776 {
-            Operand::Register((code % 32768) as usize)
+            Operand::Register((code % MAX_NUM) as usize)
         } else {
             panic!("Unexpected operand: {}", code)
         }
@@ -109,6 +111,10 @@ impl VM {
             ),
             13 => Operation::Or(
                 self.parse_operand(),
+                self.parse_operand(),
+                self.parse_operand()
+            ),
+            14 => Operation::Not(
                 self.parse_operand(),
                 self.parse_operand()
             ),
@@ -185,19 +191,24 @@ impl VM {
                 Operation::Add(a, b, c) => {
                     let b = self.get_operand(b);
                     let c = self.get_operand(c);
-                    let value = (b + c) % 32768;
+                    let value = (b + c) % MAX_NUM;
                     self.set_value(a, value)
                 }
                 Operation::And(a, b, c) => {
                     let b = self.get_operand(b);
                     let c = self.get_operand(c);
-                    let value = (b.bitand(c)) % 32768;
+                    let value = (b.bitand(c)) % MAX_NUM;
                     self.set_value(a, value)
                 }
                 Operation::Or(a, b, c) => {
                     let b = self.get_operand(b);
                     let c = self.get_operand(c);
-                    let value = (b.bitor(c)) % 32768;
+                    let value = (b.bitor(c)) % MAX_NUM;
+                    self.set_value(a, value)
+                }
+                Operation::Not(a, b) => {
+                    let b = self.get_operand(b);
+                    let value = (!b) % MAX_NUM;
                     self.set_value(a, value)
                 }
                 Operation::Out(a) => {
