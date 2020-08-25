@@ -24,6 +24,7 @@ pub enum Operation {
     And(Operand, Operand, Operand),
     Or(Operand, Operand, Operand),
     Not(Operand, Operand),
+    Call(Operand),
     Out(Operand),
     Noop,
 }
@@ -118,6 +119,9 @@ impl VM {
                 self.parse_operand(),
                 self.parse_operand()
             ),
+            17 => Operation::Call(
+                self.parse_operand()
+            ),
             19 => Operation::Out(self.parse_operand()),
             21 => Operation::Noop,
             _ => panic!("Unexpected opcode: {}", opcode),
@@ -210,6 +214,11 @@ impl VM {
                     let b = self.get_operand(b);
                     let value = (!b) % MAX_NUM;
                     self.set_value(a, value)
+                }
+                Operation::Call(a) => {
+                    let a = self.get_operand(a);
+                    self.stack.push(self.pc);
+                    self.pc = a;
                 }
                 Operation::Out(a) => {
                     let a = self.get_operand(a) as u32;
