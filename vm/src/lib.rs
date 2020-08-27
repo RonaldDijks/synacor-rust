@@ -27,6 +27,7 @@ pub enum Operation {
     Or(Operand, Operand, Operand),
     Not(Operand, Operand),
     RMem(Operand, Operand),
+    WMem(Operand, Operand),
     Call(Operand),
     Out(Operand),
     Noop,
@@ -102,6 +103,7 @@ impl VM {
             13 => Operation::Or(self.parse_op(), self.parse_op(), self.parse_op()),
             14 => Operation::Not(self.parse_op(), self.parse_op()),
             15 => Operation::RMem(self.parse_op(), self.parse_op()),
+            16 => Operation::WMem(self.parse_op(), self.parse_op()),
             17 => Operation::Call(self.parse_op()),
             19 => Operation::Out(self.parse_op()),
             21 => Operation::Noop,
@@ -208,6 +210,11 @@ impl VM {
                     let b = self.read(b);
                     let value = self.memory[b as usize];
                     self.set(a, value);
+                }
+                Operation::WMem(a, b) => {
+                    let b = self.read(b);
+                    let addr = self.read(a);
+                    self.set(Operand::Literal(addr as usize), b);
                 }
                 Operation::Call(a) => {
                     let a = self.read(a);
