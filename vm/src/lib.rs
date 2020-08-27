@@ -29,6 +29,7 @@ pub enum Operation {
     RMem(Operand, Operand),
     WMem(Operand, Operand),
     Call(Operand),
+    Ret,
     Out(Operand),
     Noop,
 }
@@ -105,6 +106,7 @@ impl VM {
             15 => Operation::RMem(self.parse_op(), self.parse_op()),
             16 => Operation::WMem(self.parse_op(), self.parse_op()),
             17 => Operation::Call(self.parse_op()),
+            18 => Operation::Ret,
             19 => Operation::Out(self.parse_op()),
             21 => Operation::Noop,
             _ => panic!("Unexpected opcode: {}", opcode),
@@ -220,6 +222,10 @@ impl VM {
                     let a = self.read(a);
                     self.stack.push(self.pc);
                     self.pc = a;
+                }
+                Operation::Ret => {
+                    let address = self.stack.pop().unwrap();
+                    self.pc = address;
                 }
                 Operation::Out(a) => {
                     let a = self.read(a) as u32;
