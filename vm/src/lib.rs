@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 use byteorder::{LittleEndian, ReadBytesExt};
+use std::io;
 use std::io::Cursor;
 use std::ops::BitAnd;
 use std::ops::BitOr;
@@ -31,6 +32,7 @@ pub enum Operation {
     Call(Operand),
     Ret,
     Out(Operand),
+    In(Operand),
     Noop,
 }
 
@@ -52,11 +54,49 @@ impl Operand {
     }
 }
 
+trait IO {
+    fn read(&mut self) -> char;
+    fn write(&mut self, value: char) -> ();
+}
+
+fn read_input() -> String {
+    let mut input = String::new();
+    io::stdin()
+        .read_line(&mut input)
+        .expect("error: unable to read user input");
+    return input;
+}
+
+struct ConsoleIO {
+    in_buffer: Vec<char>,
+}
+
+impl IO for ConsoleIO {
+    fn read(&mut self) -> char {
+        if self.in_buffer.is_empty() {
+            self.in_buffer = read_input().chars().rev().collect();
+        }
+        return self.in_buffer.pop().unwrap();
+    }
+    fn write(&mut self, value: char) {
+        print!("{}", value)
+    }
+}
+
+impl ConsoleIO {
+    pub fn new() -> Self {
+        ConsoleIO {
+            in_buffer: Vec::new(),
+        }
+    }
+}
+
 pub struct VM {
     memory: [u16; MEM_SIZE],
     registers: [u16; NUM_REGISTERS],
     stack: Vec<u16>,
     pc: u16,
+    io: Box<dyn IO>,
 }
 
 impl VM {
@@ -66,6 +106,7 @@ impl VM {
             registers: [0; NUM_REGISTERS],
             stack: Vec::new(),
             pc: 0,
+            io: Box::new(ConsoleIO::new()),
         }
     }
 
@@ -108,6 +149,7 @@ impl VM {
             17 => Operation::Call(self.parse_op()),
             18 => Operation::Ret,
             19 => Operation::Out(self.parse_op()),
+            20 => Operation::In(self.parse_op()),
             21 => Operation::Noop,
             _ => panic!("Unexpected opcode: {}", opcode),
         }
@@ -230,7 +272,11 @@ impl VM {
                 Operation::Out(a) => {
                     let a = self.read(a) as u32;
                     let a = std::char::from_u32(a).unwrap();
-                    print!("{}", a);
+                    self.io.write(a);
+                }
+                Operation::In(a) => {
+                    let character = self.io.read();
+                    self.set(a, character as u16);
                 }
                 Operation::Noop => continue,
             }
